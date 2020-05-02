@@ -1,0 +1,2371 @@
+           ллллллл   лллллллл   ллллл    лллллллл  л       л  лл    лл
+           лл    лл     лл     лл   лл   лл        лл     лл  лл    лл
+           лл    лл     лл    лл     лл  лл        ллл   ллл  лл    лл
+           ллллллл      лл    лл         лллллллл  лллл лллл  лл    лл
+           лл           лл    лл     лл  лл        лл ллл лл  лл    лл
+           лл           лл     лл   лл   лл        лл  л  лл   лл  лл
+           лл        лллллллл   ллллл    лллллллл  лл     лл    лллл
+
+
+              лл      лллллл   лллллллл   лллллл   лллллллл  лллллллл
+             ллл     лл    лл  лл        лл    лл  лл    лл  лл
+              лл           лл  лл        лл             лл   лл
+              лл      лллллл   лллллл    ллллллл       лл    ллллллл
+              лл     лл        лл        лл    лл      лл          лл
+              лл     лл        лл        лл    лл      лл          лл
+           лллллллл  лллллллл  лл         лллллл       лл    ллллллл
+
+
+Copyright (c) 2001-2004
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2
+or any later version published by the Free Software Foundation.  A copy of
+the license is included in the software package, or may be downloaded at
+http://www.gnu.org/licenses/fdl.txt
+
+
+
+Microchip, PIC, 12F675, MPLAB, and probably lots of stuff I haven't though
+of are trademarks or servicemarks of Microchip.  Hopefully they won't sue me
+for using them.
+
+
+
+DISCLAIMER:
+
+   The PICEMU package is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+   The author, his heirs, or assigns may not be held liable for any
+   direct, consequential, or incidental damage of any kind that results
+   from the use or existance of anything associated with PICEMU.
+
+   The author takes no responsibility for damage to computing hardware;
+   damage to computing software; damage to structures (permanent,
+   temporary, or other) housing or associated or near computer hardware
+   or software; the spontaneous cloning of Bill Gates; any sort of
+   personal injury whatsoever; any mental anguish such as aggravation,
+   frustration, depression and any resultant suicide or self-inflicted
+   personal injury; any "going postal" by someone who knows this
+   software exists; the collapse of civilization; playing a game of
+   "global thermonuclear war"; peace in the middle east; fires, floods,
+   tornadoes, hurricanes, lovely spring days, cold winter nights, rains
+   of frogs or other fortean phenomena, or any other conceivable or
+   inconceivable meteorological phenomena; the intervention in the
+   mortal realm by gods, demons, trolls, orcs, hobbits, elves, wizards,
+   alien races, or any other sort of deity or non-human entit(ies); the
+   appearance of comets, rouge planets, or the re-arrangement of the
+   stars in the heavens into unfavorable astrological configurations;
+   the explosion of the Sun, the collapse of the universe into a giant
+   black hole, or the eventual heat-death of the universe; and any
+   other greater or lesser effect associated with this software in any
+   manner, shape, or form.
+
+
+
+The P12F675.EXE program is a DOS-based emulator of a PIC 12F675 processor.
+The standard reference document was 41190C.PDF from Microchip.
+
+While the interface isn't a gee-whiz windoze GUI, it should be quite useful.
+As a benefit, the program is much faster, more accurate, and more complete
+than the simulator built into MPLAB (version 6.20.00) from Microchip.
+
+I'm using the output of the enclosed HI-TECH PICC program 675TIME.C as a
+standard benchmark.  Different programs run at different speeds, as more or
+less complex emulation is required.
+
+Machine type                               IPS
+---------------------------------------    ----------
+PIII-600 100Mhz FSB                        ~3,400,000
+Athlon XP 1700+, 266Mhz FSB, PC2100 DDR    ~9,400,000 
+
+
+
+LIMITATIONS OF 12F675 EMULATION:
+
+   None known.
+
+
+
+OPEN PROGRAMMING QUESTIONS:
+
+   Should PICEMU save the symbol table in a .PIM file if it has one (from
+   reading a .COD file)?
+
+   Should PICEMU save the I2C setup and I2C EEPROM contents in .PIM files?
+
+   It seems that the INT function of GP2 is independent of the
+   TRISIO register.  Is this correct?
+
+   How close to 18ms (simulated time) should the watchdog timer be?
+
+
+
+REVISION HISTORY:
+
+   Version 1.20      3/26/04
+      Bug fixes:
+         * GPIO register was not correctly reported by R command (and
+           register window), although the correct values were used by the
+           simulator.
+         * Lots of little things...
+      Updated features:
+         * GP0 .. GP5 and RA0 .. RA5 are now supported as pin names.
+         * Go / Proceede / Return can now have instruction count.
+         * Stimulus files can now handle periodic stimului.
+         * Instruction count breakpoints (both EXecute and Go / Proceede /
+           RETurn) can use a total instruction count as well as relative
+           instruction count (this was always possible, but not documented).
+         * WAKE command can now, optionally, update processor status.
+         * Although not visible, lots of internal changes to support source
+           code unification (all the 14-bit core versions now compile from
+           the same source.  Which was harder than it sounds, considering
+           that they all started from the same code.)
+   Version 1.15      8/6/03
+      First beta-test release.
+
+
+
+"TO-DO" LIST:
+
+   Allow more complex port manipulations via keyboard.
+
+   Map I/O pins to I/O pins of a PC's parallel port (see below).
+
+   Better user interface (partially done, see below).
+
+   Load user program(s) that hook into PICEMU processing (see below).
+
+   Notes: I wrote SOFTUart input from file, and wasn't happy with the
+          results (timing, since the entire bytestream was sent in one big
+          "lump").  To make it really effective, I'd need to write some sort
+          of script into SOFTUart input files and interpret it inside
+          PICEMU, but felt this was more trouble than it was worth.
+
+          I've decided not to support SPI EEPROM, as the complexity of the
+          interacting I/O pins (CS, HOLD, CLK, SI, SO) and command structure
+          made it more trouble than it was worth.
+
+
+
+FILES INCLUDED IN THIS PACKAGE:
+
+   P12F675.TXT   - this file.
+   P12F675.EXE   - the PICEMU executable.
+   HELP675.DAT   - external HELP file for P12F675.EXE.
+   COMMANDS.TXT  - "quick reference" to P12F675.EXE commands.
+   EXAMPLES.TXT  - Guided tour of P12F675 examples included in this package.
+   675TIME.C     - source to standard timing test code.
+   675TIME.COD   - compiled standard timing test code.
+   675TIME.675   - input file for running 675TIME example code
+   T0_SUART.C    - source to softuart / keyboard I/O pin manipulation
+                   / OSCope example.
+   T0_SUART.LST  - compiler list file, useful to look through.
+   T0_SUART.HEX  - Intel-format .HEX file generated from T0_SUART.C
+   T0_SUART.COD  - Bytecraft .COD file generated from T0_SUART.C
+   T0_SUART.675  - input file for running T0_SUART example code.
+   T0_SUART.STM  - example stimulus file used in T0_SUART example.
+   OSCOPE.C      - source to simple "oscilloscope" using softuart.
+   OSCOPE.LST    - compiler list file, useful to look through.
+   OSCOPE.HEX    - Intel-format .HEX file generated from OSCOPE.C
+   OSCOPE.COD    - Bytecraft .COD file generated from OSCOPE.C
+   OSCOPE.675    - input file for running OSCOPE example code.
+   SINE.ADC      - Sine wave .ADC file for OSCOPE example.
+   SQUARE.ADC    - Square wave .ADC file for OSCOPE example.
+   RAMP.ADC      - Ramp wave .ADC file for OSCOPE example.
+   SAWTOOTH.ADC  - Sawtooth (triangle) wave .ADC file for OSCOPE example.
+   SINE.STM      - Sine wave stimulus file for OSCOPE example.
+   SQUARE.STM    - Square wave stimulus file for OSCOPE example.
+   RAMP.STM      - Ramp wave stimulus file for OSCOPE example.
+   SAWTOOTH.STM  - Sawtooth (triangle) wave stimulus file for OSCOPE example.
+   FAKEADC.C     - source to 4-bit ADC implemented with comparitor.
+   FAKEADC.LST   - compiler list file, useful to look through.
+   FAKEADC.HEX   - Intel-format .HEX file generated from FAKEADC.C
+   FAKEADC.COD   - Bytecraft .COD file generated from FAKEADC.C
+   FAKEADC.675   - input file for running FAKEADC example code.
+   FAKEADCL.STM  - example stimulus file for FAKEADC example, low range.
+   FAKEADCH.STM  - example stimulus file for FAKEADC example, high range.
+
+
+
+P12F675 AND ANALOG PROCESSING:
+
+   Much of the functionality of the 12F675 chip comes from it's analog
+   processing capabilities (comparitor, ADC).  As a result, PICEMU had to
+   support this analog processing.
+
+   The change to PICEMU is that all inputs are now analog, and used as either
+   analog or digital depending on the current state of the input pin.  Outputs
+   are still digital.
+
+   Analog values are represented by an unsigned 16-bit number (0000 to FFFF
+   in hex), which (logically) ranges from Vss (Ground) to Vdd (operating
+   voltage).
+
+   If an input is given a digital value (0 or 1), it is translated to an
+   analog value (0000 or FFFF) when used within PICEMU.
+
+   For an analog input (ADC or comparitor), the analog signal applied is
+   used in the operation.
+
+   For a digital input, PICEMU currently uses a Schmitt trigger level with
+   hysterisis to determine whether the input is HIGH or LOW.  A LOW (FALSE
+   or 0) digital input must have an analog value greater than 0.8 Vdd, or
+   CCCC hex, to switch to a HIGH (TRUE or 1) digital input.  And, a HIGH
+   (TRUE or 1) digital input must have an analog value less than 0.2 Vdd, or
+   3333 hex, to switch to a LOW (FALSE or 0) digital input.
+   
+   It should be noted that different pins on an actual 12F675 have different
+   HIGH thresholds (some use Schmitt trigger levels, others use TTL trigger
+   levels (0.25 Vdd + 0.8V, or 2.0V for 4.5V < Vdd < 5.0V)).  Also the
+   thresholds depend on the function assigned to the pin.  If you really
+   need that level of accuracy, please let me know.
+
+
+
+FILETYPES USED BY P12F675:
+
+   P12F675 will read Bytecraft .COD files, Intel-format .HEX files, and
+   PICEMU's own .PIM files.  It does not check the PIC type in .COD files,
+   as it will handle code for "lesser" 14-BIT PIC chips in the same family,
+   such as the 12F629, as well as a 12F675.
+
+   P12F675 will write Intel-format .HEX files, and PICEMU's own .PIM files.
+
+   Being a DOS based program, names are limited to DOS' 8.3 filename format.
+
+
+
+P12F675 COMMANDLINE PARAMETERS:
+
+   The P12F675 program will accept three optional command line parameters.
+   The order does not matter.
+
+   The first parameter is the name of a .COD, .HEX, or .PIM (although
+   the extension does not matter, just the file type) file that will be
+   loaded into program memory.
+
+   The second parameter must be proceeded by a dash (a '-'), and is the
+   name of an Input file (see commands below) to read commands from.
+
+   If both filename and input file are present, the file is loaded into
+   memory before input processing starts.
+
+   The third parameter overrides PICEMU's automatic detection of VESA/VGA
+   configuration.  By default, PICEMU will use VESA 132x50 text mode first,
+   then VGA 80x50 text mode, then "nothing" (standard, boring 80x25 command
+   line interface).  /VGA will override VESA detection and force a VGA text
+   screen, while /NONE will override both VESA and VGA detection.
+
+   So, a command line might look like:
+      P12F675 675TIME.COD -TESTING.IN /NONE
+
+
+
+P12F675 "Window" USAGE:
+
+   When PICEMU starts, it will automatically check for availability of
+   132x50 VESA text mode and 80x50 VGA text mode.  The order of preference
+   is 132x50 VESA text, 80x50 VGA text, and "nothing" (standard, boring
+   80x25 command line interface).  This may be overridden by the command
+   line switchs /VGA and /NONE, noted above.
+
+   Note that VESA and VGA modes will probably not be available when DOS is
+   running in a window under Windows.  You should be running a "full-screen"
+   DOS window (i.e. no graphics, just a DOS prompt on the screen) to take
+   advantage of PICEMU's information windows.  If you see a border on your
+   DOS window, try typing Alt-Enter to switch to full-screen mode.
+
+   When using 132x50 VESA text mode, PICEMU uses a screen layout like this:
+
+        Execution info, processor status    +--------------------------
+        and current instr                   |  Port display
+                                            +--------------------------
+      --------------------------------------+
+        Registers                           |  "Where" display
+        (scrollable)                        |  (instruction execution
+                                            |   history)
+      --------------------------------------+  (scrollable)
+        EEPROM                              |
+        (scrollable)                        |
+      --------------------------------------+
+        Watch registers                     |
+                                            |
+      --------------------------------------+--------------------------
+        Command window                      |  Disassembly window
+        (doubles as browse window and       |  (scrollable)
+         serial window, may be partially    |  (may be partially
+         overwritten by oscope)             |   overwritten by
+                                            |   oscope)
+                                            |
+                                            |
+                                            |
+
+   The port display window has been updated.  A typical port display might
+   look like this:
+                    5    4    3    2    1    0
+       GP           I+   A    I-   O-   C    C
+                    FFFF 1234 2345      1234 ABCD
+   A symbol of I+ shows a HIGH digital input port, and a symbol of I- shows
+   a LOW digital input port.  Since these are derived from the analog signal
+   applied to the pin, the actual analog value is displayed as a hex number
+   below the I+ or I- symbol.
+
+   A symbol of A shows an ADC input port, and the analog signal applied to
+   the pin is displayed as a hex number below the A symbol.
+
+   A symbol of C shows a comparitor input port, and the analog signal applied
+   to the pin is displayed as a hex number below the C symbol.
+
+   A symbol of O+ shows a HIGH digital output, and a symbol of O- shows a LOW
+   digital output.  Since outputs are digital, not analog, no analog value is
+   displayed below a O+ or O- symbol
+
+   When using 80x50 VESA text mode, PICEMU uses a screen layout like this:
+
+        Execution info, processor status
+        and current instruction
+
+      -------------------------------------------------------------------
+        Registers
+        (scrollable)
+
+      -------------------------------------------------------------------
+        EEPROM
+        (scrollable)
+      -------------------------------------------------------------------
+        Watch registers
+
+      -------------------------------------------------------------------
+        Command window
+        (doubles as browse window and serial window, may be partially
+        overwritten by port display and oscope)
+
+   In VGA and "normal" mode, the port display does not have it's own window,
+   but if the port display is turned on it is shown in the main command
+   window whenever the simulated program is running (or shown via the View P
+   command), and has the format described above.
+
+   For P12F675, the register window, the EEPROM window, the "where" display
+   and the disassembly window cannot show all the available information, and
+   thus, when selected, can be scrolled by the cursor keys (Up arrow, Down
+   arrow, PgUp, PgDn, Home, End).
+
+   The default window is the Command window, indicated by it's Yellow
+   name bar.  You can switch between it and the scrollable windows
+   by Ctrl-Tab.  The currently active window is indicated by it's Yellow
+   name bar and contents.  A reminder of the scrolling keys also appears
+   on the name bar.
+
+   In the register information window, unimplemented registers are displayed
+   as '--'
+
+   The F11 key will reset video mode and redraw the screen.  This is useful
+   primarily under Windows, where switching tasks (active windows) will
+   sometimes not restore the PICEMU screen, particularly for VESA mode.
+   The F11 key is active whenever PICEMU is not executing code.
+
+   Note that F11 is also useful as a "ClearScreen" command.
+
+   NOTE: The data shown in the information windows does not get echoed
+         to an output file (if used).
+
+   IMPORTANT NOTE:  When information windows are active, execution info,
+                    processor status, and current instrction are always
+                    available (the same info as the R command), and so
+                    this information is not displayed after a breakpoint
+                    stops execution.  If you want this information in an
+                    output file, you must explicitly use the R command.
+
+
+
+
+SYMBOLS:
+
+   When P12F675 reads Bytecraft .COD files, and will also read the "short"
+   (12 character max) symbol table for code addresses.  These symbols will be
+   displayed in disassembled code (Where, Unassemble, Registers, Trace, etc)
+   as labels on statements.
+
+   These symbols may also be used as values, so that if your code has a
+   symbol "subroutine" at an offset of 0x1234, a statement like
+      G subroutine
+   or
+      B subroutine+5
+   will be understood by PICEMU.
+
+   When looking for a symbol, PICEMU will also find partial names.  So,
+   if you have a symbol "subroutine" that is unique in 3 characters, you
+   need only type the first 3 characters (i.e. G sub).  If you have symbols
+   like "sub" and "subroutine", giving PICEMU "sub" will return the value
+   of "sub", while giving PICEMU "subr" will return the value of "subroutine".
+
+   If you type a symbol that is not unique (i.e. "sub" and you have both
+   "subroutine1" and "subroutine2"), you will be given an error by PICEMU.
+
+   There may be more than one symbol for a particular address.  In this case,
+   when disassembling code, PICEMU will use the first matching symbol it
+   finds.  This is why you might type something like:
+      G start
+   but PICEMU will label the address it stops at with "exit".  (675TIME.COD
+   shows this behavior.)
+
+   When looking for symbols PICEMU ignores the case of the symbol.  This can
+   be a problem with (for example) C code, where case is significant.  If
+   you have subroutines named "xyz" and "XYZ", doing "G XYZ" might stop
+   at "xyz".  Ignoring case seemed to be the best solution, I'd appreciate
+   feedback on this point.
+
+   If you have symbols longer than 12 characters, they will be truncated.
+   This can result in multiple symbols with the same name.  For example,
+   "longsubroutine1" and "longsubroutine2" will both wind up as
+   "longsubrouti".  As a result, you would have to type in the entire name
+   of the symbol ("longsubrouti") and there is no guarantee of which symbol
+   that will correspond to (it depends on the order of symbols in the .COD
+   file).
+
+   If a string could be interpreted both as a number and as a symbol, it
+   will be treated as a symbol.  For example, if you have a symbol "abc"
+      G abc
+   will be treated as the symbol "abc", not the number 0x0abc.  If you want
+   to force this to be a number, add 0's to the start of the string as
+   needed.  i.e.
+      G 0abc
+
+   I'm trying to decide if I should save symbol table information in .PIM
+   files.  Suggestions?  Note that adding symbol tables will (probably)
+   make .PIM files incompatible with older versions of PICEMU.
+
+
+
+COMMAND PROCESSING:
+
+   There are several editing options available at the command prompt:
+      Left-Arrow: move the cursor left one position.
+      Right-Arrow: move the cursor right one position.
+      Home: move the cursor to the start of the current command.
+      End: move the cursor to the end of the current command.
+      Esc: Abort the current command (does not clear the previous command
+           buffer).
+      F3: retype the previous command from the current cursor position to the
+          end of the previous command.
+      Backspace:  Delete the character to the left of the cursor.
+      Del: Delete characer under the cursor.
+      Ins: Toggle between Insert and Overstrike mode.
+
+   Ctrl-Tab will toggle between available windows.  The current window is
+   highlighted in yellow.  In a scrollable window (such as disassembly), the
+   available keys are:
+      Up-Arrow:  move one line up.
+      Down-Arrow: move one line down.
+      PgUp: move one "page" (logical screen) up.
+      PgDn: move one "page" (logical screen) down.
+      Home: move to the top of the available data.
+      End:  move to the end of the available data.
+
+   When the command window is active, pressing F12 before anything has
+   been typed at the command prompt will Trace 1 instruction.
+
+   The F11 key will reset video mode and redraw the screen.  This is useful
+   primarily under Windows, where switching tasks (active windows) will
+   sometimes not restore the PICEMU screen, particularly for VESA mode.
+   The F11 key is active whenever PICEMU is not executing code.
+
+   Note that F11 is also useful as a "ClearScreen" command.
+
+
+
+P12F675 PROGRAM COMMANDS:
+
+   Use RightShift + ESC to stop a running program and return to the
+   command prompt.  This key combination is used instead of a simple ESC
+   key to allow sending an ESC to the 12F675 via SOFTUart.
+
+   Use ESC to stop a program running via Trace or TRACETrue and return
+   to the command prompt.
+
+   The upper-case letters which start each command listed below are manditory,
+   so that the program can distinguish the command.  The remainder of the
+   command (shown in lower case) is optional.
+
+   A space or tab must separate a command and it's parameters, and must
+   separate multiple parameters.
+
+   Numeric values, except in the assembler, can be expressions as discussed
+   in the CALC comamnd.
+
+   There may be multiple forms of the same command, to make the user interface
+   more intuitive.  These forms behave exactly alike, and are listed together
+   before the description of the command.
+
+   Commands may have parameters, which may or may not be optional.  The
+   notation used is:
+      []   denote an optional parameter
+      {}   denotes "pick one of the enclosed"
+      ...  denotes multiple parameters in the same general format
+
+   Pins are named GP0 .. GP5, and may also be given as A0 .. A5 or RA0 .. RA5
+   (for compatibility with other versions of PICEMU).
+
+   With trivial exceptions like the FRequency and SOFTUart commands, PICEMU
+   generally expects all numbers to be in HEX (but without a leading 0x).
+
+
+
+   ;
+   #
+      Any line that starts with a semi-colon or a pound sign, followed by
+      a space/tab is a comment and is ignored.
+
+
+
+   ADC {off [d:][\path\]filename}
+      Load a list of values to be used for ADC conversion results, or turn the
+      list of ADC values off.  The maximum size of the list is 2048 entries,
+      and it is an ASCII text file which contains hex values, one per line.
+
+      The list does not contain channel information, instead values are used
+      sequentially whenever an ADC conversion is successful.  When the end of
+      the list is reached, it wraps back to the first value in the list.
+
+      Doing either a RESET or STOPWatch command (to be compatible with stimulus
+      files) will reset the list to the start.
+
+      This command takes the place of the only useful function of register
+      stimulus files in MPLAB.
+
+      If the list size is not big enough, or if channel information is
+      required, please let me know.
+
+
+
+   ALLRegs [reg [value]]
+      The ALLRegs behaves like the Registers command, except that ALL
+      registers are displayed, not just 00 to 1f and the registers
+      specified by the SHOWRegs command.
+
+      ALLRegs has been added to support the CHECKPoint command.
+
+
+
+   Assemble [start]
+      Assemble instruction into memory.  If start is given, assembly will
+      start there, else it will start after the last instruction assembled
+      (or 0 after a reset).
+
+      All mnemonics are supported, including F/W as well as 1/0 as target
+      register.  Mnemonics are not case sensitive.  Mnemonics do not
+      include either register names or bit names within registers.  The
+      available instruction mnemonics and formats are:
+         NOP
+         RETURN
+         RETFIE
+         OPTION     NOTE: Microchip discourages use of the OPTION instruction
+                          on 14-bit processors.
+         SLEEP
+         CLRWDT
+         TRIS   f   NOTE: only 5 <= f <= 7 are valid.  Microchip discourages
+                          use of the TRIS instruction on 14-bit processors.
+         MOVWF  f
+         CLRW
+         CLRF   f
+         SUBW   f,d
+         DECF   f,d
+         IORWF  f,d
+         ANDWF  f,d
+         XORWF  f,d
+         ADDWF  f,d
+         MOVF   f,d
+         COMF   f,d
+         INCF   f,d
+         DECFSZ f,d
+         RRF    f,d
+         RLF    f,d
+         SWAPF  f,d
+         INCFSZ f,d
+         BCF    f,b
+         BSF    f,b
+         BTFSC  f,b
+         BTFSS  f,b
+         CALL   k11
+         GOTO   k11
+         MOVLW  k
+         RETLW  k
+         IORLW  k
+         ANDLW  k
+         XORLW  k
+         SUBLW  k
+         ADDLW  k
+      Where f   = register file address (register number)
+            d   = destination select (W or 0 --> store result in W,
+                                      F or 1 --> store result in f)
+                  If an instruction needs a destination and it is not
+                  given, it defaults to F (MPASM compatibility).
+            b   = bit address within 8-bit register (a number 0 .. 7)
+            k   = an 8-bit constant (0 .. ff)
+            k11 = an 11-bit constant (0 .. 7ff), used for GOTO and CALL
+
+      The pseudo-ops ORG, DB, DW, and DT are supported.
+         ORG xxx   (xxx is hex)
+            changes the assembly location to xxx
+         DB  xx,yy,"string",'string',zz,...
+            assemble data bytes (8 bits) into memory.  The high 6 bits of
+            the 14-bit word are 0.  Numeric values are in hex.
+         DW  xxxx,yyyy,"string",'string',zzzz,...
+            assemble data words (14 bits) into memory.  Numeric values are
+            in hex.  ASCII data sets the high 6 bits to 0.
+         DT xx,yy,"string",'string',zz,...
+            assemble data bytes (8 bits) into memory as the value of RETLW
+            instructions.  This allows the creation of data lookup tables.
+            Numeric values are in hex.
+
+
+
+   Breakpoints {[on] [off]} [[start1[,end1]] ... [start10[,end10]]]
+      Set or disable or display memory breakpoints.
+
+      If ON or OFF is specified, it must be the first parameter, and
+      breakpoint status will be set to the desired value.
+
+      If a breakpoint list is given, breakpoints will be placed on memory
+      as specified, which may be ranges.  If only a starting location is
+      given, the breakpoint will be on that instruction only.  Note that
+      setting a list of breakpoints automatically turns breakpoints on,
+      which will override an OFF before a list of breakpoints.
+
+      If no breakpoint list is given, the current breakpoints and their
+      ON/OFF state will be displayed.
+
+      The use of breakpoints will slow down the emulator.
+
+
+
+   BROwse [[d:][\path\]filename]
+      If no filename is given, the last file browsed is opened at the
+      location last displayed.
+
+      View a file in read-only mode.  The file is displayed page-by-page,
+      so you cannot move a few lines to make viewing easier (oh, well...)
+      Use the cursor keys to move through the file (they are displayed at
+      the top of the browse screen).
+
+      You can also search for text, or repeat the last search (via Again).
+
+      Press ESC to return to command mode.
+
+
+
+   CALC expression
+      Calculate the value of the expression.  All calculations are done
+      as 16-bit quantities, and all numbers are HEX.
+
+      The expression cannot contain any spaces or tabs.
+
+      The following operators are legal:
+         [expression]   - use the contents of register number 'expression'
+         (expresion)    - override operator precidence, calculate expression
+                          first
+         ~              - bitwise NOT
+         *              - multiply
+         /              - divide
+         %              - modulo (remainder)
+         +              - add
+         -              - subtract
+         >              - right rotate
+         <              - left rotate
+         &              - bitwise AND
+         |              - bitwise OR
+         ^              - bitwise XOR
+
+      In addition to hex numbers, the register names W and IP (case
+      insensitive) are recognized, and their values will be used.
+      If symbols are loaded from a .COD file, they can also be used in
+      the CALC command.
+
+
+
+   CHECKPoint [time=val] [[start1[,end1]] ... [start10[,end10]] [;cmd1 [;cmd2 ...]]
+      If Output (echo PICEMU output to a file) is not in use, CHECKpoint
+      becomes an alias for the Go command.  This is because so much output
+      can be generated that it cannot be kept on the screen.
+
+      Otherwise, it behaves like the Go command with a difference:  Only
+      the keyboard breakpoint (RightShift + Esc) will stop program execution.
+      All other breakpoints (memory location, register, stack, etc) pause
+      long enough to perform the requested commands (which are echoed to the
+      output file) and update information windows (if in VESA or VGA mode).
+      Execution will then resume.
+
+      The commands to be executed during this pause are separated from
+      any parameters to CHECKpoint (i.e. TIME=xxxx or breakpoint location(s))
+      by a semi-colon (a ';'), and multiple commands to be executed during
+      the pause are separated by semi-colons.
+
+      If no commands are given, CHECKPoint will default to
+         allregs ; ee ; w ; u ip
+      which shows all registers, the EEPROM contents, shows the last 16
+      instructions executed, and the next 20 instructions to be executed.
+
+      Not all commands are valid for CHECKPoint.  The valid commands are:
+         ENTEREeprom
+         RESET
+         STOPWatch
+         FILLEeprom
+         SETPorts
+         ALLRegs
+         CALC
+         CONFig
+         STIMulus
+         REGDisplay
+         SHOWregs
+         FEEprom
+         EEEprom
+         WAKE
+         EEprom
+         Enter
+         Fill
+         Registers
+         Unassemble
+         Where
+
+      So, a typical command might look like:
+         CHECKPoint 2ff ;r
+      or
+         REGBreak 12
+         CHECKP ;w 4;u ip l4
+
+
+
+   CHECKStack {[on] [off]}
+      The default behavior of PICEMU is to not allow stack overflow
+      or underflow.  Instead, PICEMU treats this as a breakpoint (CHECKStack
+      is ON).
+
+      However, it may be desireable in testing to let the chips fall
+      where they may.
+
+      The CHECKStack command will set or clear breakpoint on stack overflow/
+      underflow.  The new value is displayed.
+
+
+
+   CONFig [value]
+      If a value is given, it will be placed in the configuration register.
+      The new configuration will take effect immediately.
+
+      If no value is given, the value of the configuration register is
+      displayed.
+
+
+
+   Create [d:][\path\]filename
+      Create a .PIM file which contains the program memory only.  When
+      loaded, PICEMU will be in the reset state.
+
+      The contents of PIM files may change between releases.
+
+
+
+   DIR [[d:][\path\]wildname]
+      Get a directory listing.  If no drive, path or wildcard filename is
+      given, all files in the current directory are displayed.
+
+
+
+   EEprom [start [{end Llen}]]
+      Show the contents of the EEPROM.  The default is to show the entire
+      EEPROM.
+
+      If a start only is given, only the single EEPROM location will be
+      shown.
+
+      If an end or length is given, the range of EEPROM locations will
+      be shown.
+
+      Note that this is the internal EEPROM, not the "external" EEPROM
+      setup by the I2C command.
+
+
+
+   Enter startloc value [value ...]
+      Enter value(s) into registers, starting at startloc.  Value(s) may
+      be hex numbers (or expressions) or quoted strings.  As many registers
+      will be filled as necessary for the value(s) given.
+
+
+
+   ENTEREeprom startloc value [value ...]
+   EEEprom startloc value [value ...]
+      Enter value(s) into EEPROM, starting at startloc.  Value(s) may be
+      hex numbers (or expressions) or quoted strings.  As many locations
+      will be filled as necessary for the value(s) given.
+
+      Note that this is the internal EEPROM, not the "external" EEPROM
+      setup by the I2C command.
+
+
+
+   EXecute [time=val] [[T]instructioncount]
+      Start running a program.  If an instruction count is given, the
+      emulation will be stopped after that many instructions have been
+      executed.  The instruction count is a 64-bit HEX number (without the
+      leading 0x).
+
+      If the instruction count starts with 'T' (case is unimportant), the 
+      number is treated as the total number of instructions to stop at, rather
+      than the number of instructions to execute before stopping.  So, for
+      example, if the current total instruction count is 100, the command
+         EX T101
+      will execute 1 instruction, while the command
+         EX 101
+      will execute 101 (hex, 257 decimal) instructions.
+
+      The actual number of instructions executed may be 1 greater than the
+      number requested, if the breakpoint falls on an instruction that forces
+      a NOP in place of the instruction already fetched in the queue.
+
+      If a THRottle value is set, it will slow down the emulator (that's
+      its job).
+
+      Sticky breakpoints, if enabled, will be used.
+
+      Register breakpoints, if enabled, will be used.
+
+      The use of breakpoints will slow down the emulator.
+
+      Also, the use of
+         time=xxxx
+      will tell the emulator to stop after xxxx (a hex number from 1 to
+      ffff, without the leading 0x) system timer ticks (the standard 18.2
+      ticks/second PC timer).  Thus, 12 (hex) ticks ~= 1 second.
+
+      Use RightShift + ESC to stop a running program and return to the
+      command prompt.
+
+
+
+   Fill startloc endloc value [value ...]
+      Fill registers from startloc to endloc with value(s).  Value(s) may
+      be hex numbers (or expressions) or quoted strings.  Values will be
+      repeated as necessary to fill the given range.
+
+
+
+   FILLEeprom startloc endloc value [value ...]
+   FEEprom startloc endloc value [value ...]
+      Fill EEPROM from startloc to endloc with value(s).  Value(s) may
+      be hex numbers (or expressions) or quoted strings.  Values will be
+      repeated as necessary to fill the given range.
+
+      Note that this is the internal EEPROM, not the "external" EEPROM
+      setup by the I2C command.
+
+
+
+   FRequency [cpufrequency]
+      If no parameter is given, the current CPU clock frequency is shown.
+      The default value for P12F675 is 4Mhz.  The valid range is
+      32000 to 20000000 (32khz to 20mhz).
+
+      If a parameter is given, IN DECIMAL, the CPU clock frequency is
+      set to that value.
+
+      The freuqency can also be specified with a decimal number, either
+      US format ('.' is the decimal point) or europen format (',' is the
+      decimal point), and a trailing unit.  Some examples are:
+         4mhz
+         2,048 m
+         10.5 mhz
+         100khz
+         500 k
+         32Khz
+         128K
+      Note that, while megahertz can be either MHZ or M, is case
+      insensitive, and represents a unit of 1,000,000 hertz, kilohertz
+      (KHZ or K) is CASE SENSITIVE on the K, with lower case k being
+      1000 hertz and upper case K being 1024 hertz.  Thus,
+         500khz = 500 * 1000 = 500,000 hertz
+      while
+         32Khz = 32 * 1024 = 32,768 hertz
+
+      The CPU clock frequency is used to determine the simulated time
+      displayed after a G, P, or EX command, SOFTUart baudrate calculations,
+      for ADC timings, and for setting the watchdog timeout counter.
+
+      Note that for CPU frequencies above about 14.56Mhz, the watchdog will
+      be shorter than 18ms (simulated time).  At 20Mhz, it's about 13ms
+      (simulated time).
+
+
+
+   Go [time=val] [ic=[T]instructioncount] [start1[,end1]] ... [start10[,end10]]
+      Start running a program.  Breakpoints will be placed on program
+      memory as specified, which may be ranges.  If only a starting
+      location is given, the breakpoint is on that instruction only.
+
+      Sticky breakpoints, if enabled, will be used.
+
+      Register breakpoints, if enabled, will be used.
+
+      The use of breakpoints will slow down the emulator.
+
+      If a THRottle value is set, it will slow down the emulator (that's
+      its job).
+
+      Also, the use of
+         time=xxxx
+      will tell the emulator to stop after xxxx (a hex number from 1 to
+      ffff, without the leading 0x) system timer ticks (the standard 18.2
+      ticks/second PC timer).  Thus, 12 (hex) ticks ~= 1 second.
+
+      The IC= will tell the emulator to stop it's execution after a specified
+      number of instructions.  The instruction count is a 64-bit HEX number
+      (without the leading 0x).  If the instruction count starts with 'T'
+      (case is unimportant), the number is treated as the total number of
+      instructions to stop at, rather than the number of instructions to
+      execute before stopping.  So, for example, if the current total
+      instruction count is 100, the command
+         G IC=T101
+      will execute 1 instruction, while the command
+         G IC=101
+      will execute 101 (hex, 257 decimal) instructions.
+
+      Use RightShift + ESC to stop a running program and return to the
+      command prompt.
+
+
+
+   Help [command]
+      If a valid command is specified show help on that command, otherwise
+      show a list of commands.  The required characters are in upper case,
+      the rest of the command is in lower case.
+
+      Note that the HELP675.DAT file is required for help on a specific
+      command.  This file may reside in either the current directory or
+      the directory that contains P12F675.EXE.
+
+
+
+   HEX [d:][\path\]filename
+      Create an Intel-format .HEX file which contains the program memory,
+      EEPROM, and configuration word.  When loaded, PICEMU will be in the
+      reset state.
+
+      Note that, since PICEMU doesn't know how large your program is or
+      its contents, the entire program memory is put in the .HEX file.
+
+
+
+   HEXScreen {[on] [off]}
+      Set/disable and display the HEX mode of SOFTUart screen swapping.
+
+      If screen swapping mode is enabled, a terminal screen is used during
+      Go, Proceede, CHECKPoint and EXecute program execution so that the
+      terminal and PICEMU output don't interfere with each other.  A RESET
+      will clear the terminal screen.
+
+      If either ON or OFF is specified, HEX mode screen swapping will be set
+      to the desired state.  The default state is OFF ("NORMAL").
+
+      When HEX mode SOFTUart screen swapping is enabled, it will display
+      serial output as 2 HEX digits per character instead of ASCII text.
+      While HEX mode may be toggled at any time, the current contents of
+      the screen do not change.
+
+      Also, while in HEX mode for the terminal screen, keyboard input will
+      be taken as HEX data, with 2 keystrokes per byte.  The keys '0' ... '9'
+      and 'a' ... 'f' (case is ignored) are interpreted as HEX digits, and
+      other keys are ignored.
+
+      So, for example, when in HEX mode, pressing the keys 'a' and 7 will
+      send the byte 0xa7 to the program being tested.
+
+      Note that, if you are not in hex mode, you can still send an arbitrary
+      character by holding the Alt key and entering a decimal number (up to 3
+      digits) on the numeric keypad.  So, for example, pressing
+         <Alt>167<release Alt>
+      will send an 0xa7.
+
+
+
+   I2C {[dump] [off] [EEPROMtype SCLpin SDApin [hexfile]]}
+      Setup or disable or display I2C EEPROM.
+
+      If no parameters are given, the current I2C setup (EEPROM type, SCL pin,
+      and SDA pin) are displayed.
+
+      If the parameter is "dump" (case insensitive), the contents of the I2C
+      EEPROM are displayed.  If the output will not fit on a single page and
+      output is not being echoed to a file, PICEMU will pause for a keypress
+      between pages, and Esc will stop the dump.  If the output is being
+      echoed to a file, pressing Esc at any time will stop the dump.
+
+      If the paramter is "off", I2C processing will be disabled.  If I2C is
+      later setup again, the previous contents of the I2C will be gone.
+      NOTE:  Is this a good idea, or should I2C EEPROM contents be preserved?
+             Even when the size of I2C EEPROM changes?
+
+      When setting up I2C, EEPROMtype must be one of 2400, 2401, 2402, 2404,
+      2408, 2416, 2432, 2464, 24128, or 24256, corresponding to 128 bit,
+      1K bit, 2K bit, ..., 256K bit (16 byte, 128 byte, 256 byte, ...,
+      32K byte) EEPROMs.  SCLpin and SDApin are available I/O pins,
+      GP0 .. GP5 (or their equivalents A0 .. A5 or RA0 .. RA5), and cannot
+      be the same pin.
+
+      Note that the configuration word can change pin assignments, and if
+      a pin is not currently assigned as I/O then it will be flagged with
+      an error.  Thus, the configuration word may need to be set before
+      the I2C command is used.
+
+      If the name of a Intel .HEX file (the extension is unimportant) is
+      given, it's contents will be loaded into the I2C EEPROM.  Note that
+      the .HEX file is assumed to contain BYTE values, not the WORD values
+      used by program files.  Out-of-range data in the .HEX file will be
+      ignored.
+
+      If no .HEX file name is given, the contents of the I2C EEPROM will
+      be initalized to 0xff.
+      NOTE:  Is this a good idea, or should I2C EEPROM contents be preserved?
+             Even when the size of I2C EEPROM changes?
+
+      Note that I2C timing considerations are completely ignored.  PICEMU's
+      I2C EEPROM routines are useful for testing code that contains functional
+      I2C routines, not writing new routines.  While errors related to
+      SCL / SDA signal phase can be found, timing errors will not be found.
+
+      Note that the "logical" OSCope mode is useful for looking at I2C
+      SCL / SDA signals.
+
+      The I2C mode and contents of I2C EEPROM are not currently saved in .PIM
+      files.  If this is a serious limitation, please let me know.
+
+
+
+   Input [[d:][\path\]filename]
+      If a filename is given, get input to PICEMU from the file.
+
+      If a filename is not given, turn off input from file.
+
+
+
+   Keys [f{1 2 3 4 5 6 7 8 9 10}={  ! t < >}{gp [r]a}{0 1 2 3 4 5}] [...]
+      If no parametrs are given, show the current keymappings, otherwise...
+
+      Link a FnKey press (F1 .. F10 on a PC keyboard) to an I/O pin.  I/O
+      ports that do not exist (for example, GP4 and GP5 if HS oscillator is
+      set in the CONFIGURATION word) are flagged as invalid.
+
+      There are 5 formats for the parameter(s):
+         Fx=GPn
+         Fx=!GPn
+         Fx=TGPn
+         Fx=<GPn
+         Fx=>GPn
+      where x is 1 to 10, and n is 0 to 5.  All parameters are case
+      insensitive.
+
+      The 5 different formats correspond to 5 different actions when a FnKey
+      is pressed:
+         for Fx=GPn, the I/O pin follows the key, with an unpressed key having
+                    a value of 0 (analog input of 0), and a pressed key
+                    having a value of 1 (analog input of FFFF)
+         for Fx=!GPn, the I/O pin is inverted with respect to the key, and an
+                    unpressed key has a value of 1 (analog input of FFFF),
+                    and a pressed key has a value of 0 (analog input of 0)
+         for Fx=TGPn, the I/O pin is Toggled by having it's analog value XORed
+                    with FFFF at every keypress. Thus, digital signals (0,
+                    analog value 0) and 1 (analog value FFFF) toggle, but
+                    analog values "flip".
+         for Fx=<GPn, the analog value presented to the I/O pin is decreased
+                    by 0100 (hex) every keypress, with a minimum of 0.
+         for Fx=>GPn, the analog value presented to the I/O pin is increased
+                    by 0100 (hex) every keypress, with a maximum of FFFF.
+      Note that keeping a key pressed results in multiple keypresses being
+      reported, which is convenient for increasing/decreasing analog values.
+
+      Multiple keymapping may be placed on a single line, separated by
+      spaces.
+
+      If multiple keymappings are given to one FnKey, only the last
+      mapping is used.
+
+      A parameter of
+         Fx
+      (with x from 1 to 10) will remove the keymapping for that key.
+
+      If GP3 is MCLR (the MCLRE bit is set in the CONFIGURATION word),
+      a LOW to GP3 will reset the 12F675.
+
+      So, for example, a Keys command might look like:
+         k f1=gp1 f2=gp5 f3=!gp3 f4=tgp0 f5=<gp2 f6=>gp2
+
+      Note that MACro's are only used for command input, and do not affect
+      keymappings.
+
+      Note that the configuration word can change pin assignments, and if
+      a pin is not currently assigned as I/O then it will be flagged with
+      an error.  Thus, the configuration word may need to be set before
+      the Keys command is used.
+
+      Why are A0 .. A5 and RA0 .. RA5 synonyms for GP0 ... GP5?  For
+      compatibility with other flavors of PICEMU that have multiple I/O ports.
+
+
+
+   Load [[d:][\path\]filename]
+      Load a file into PICEMU.  It may be a Bytecraft .COD file, an
+      Intel-format .HEX file, or a PICEMU .PIM file.  The program
+      memory, configuration word, and registers/EEPROM/processor state
+      (some .PIM files) will be set.  The extension does not matter, only
+      the file type.
+
+      If given, the filename will be saved for subsequent Loads.
+
+      If the file is a Bytecraft .COD file, the (short version, 12 character
+      max) symbol table for the code will be loaded.  Symbols (labels) will
+      be displayed in the disassembled code, and may be used as numbers
+      (i.e. Go main).  The case of symbols typed into PICEMU is ignored,
+      though when displayed the correct case will be used.
+
+      Note that the EEPROM information saved is the internal EEPROM, not
+      the "external" EEPROM setup by the I2C command.
+
+
+
+   MACro [f{1 2 3 4 5 6 7 8 9 10} [string]]
+      Set or clear or show command macros.
+
+      Command macros are only active during command entry, and do not
+      interfere with keymappings.
+
+      Command macros allow the user to associate a particular string with
+      a function key, to make repetative commands easier.  This is similar
+      to the F12 key to trace one instruction, but macros can be used
+      anywhere in a command, and cannot contain a Return.
+
+      If no parameters are given, the current list of macros is displayed.
+
+      If a function key is given by itself, any macro associated with that
+      functionkey is cleared.
+
+      Otherwise, [string] is assigned to the given macro key.  This will
+      overwrite any previous association.
+
+      When a function key is pressed, any associated macro will be insterted
+      into the command at that location, as if the user had typed the string.
+
+      So, for example, you might define macros like:
+         macro f1 oscope 40000 gp0 gp1 gp2 gp0 gp5 gp4
+         macro f2 oscope off
+      and use them to toggle the OSCope functionality ON and OFF.
+
+      Note that a macro can be arbitrary text, not just a legal command.
+      So, for example, you could have a macro like:
+         macro f1 The rain in Spain falls mainly on Tuesday
+      and entering a command of:
+         ; <f1><return>
+      will result in PICEMU processing a command line of
+         ; The rain in Spain falls mainly on Tuesday
+      which, being a comment, will do nothing.
+
+      Macros recognize a special 2-character sequence, \n, at the end of the
+      macro text as a newline, and will append a CR to the end of the macro.
+
+      Besides containing complete commands, macros can contain often used
+      parameters, such as lists of breakpoints.  In the above example, if all
+      the words are in the symbol table for the current program, then using
+      a command of:
+         g <f1><return>
+      will result in PICEMU processing a command line of
+         g The rain in Spain falls mainly on Tuesday
+      which sets 8 breakpoints before starting program execution.  This can
+      be more flexible and/or convenient than having "sticky" breakpoints
+      via the Breakpoints command.
+
+
+
+   Name [d:][\path\]filename
+      Specify the name of a file to use in subsequent Load commands.
+
+
+
+   OSCope [{OFF [frequency pin1 [pin2 ... pin6]]}]
+      Show or disable or enable OSCope (Oscilloscope) function.
+
+      PICEMU can display the status of up to 6 pins in oscilloscope style,
+      scrolling right-to-left across the bottom of the screen.
+
+      If no parameters are given, then the current OSCope display is shown
+      until another key is pressed.
+
+      If the parameter is OFF, then the OSCope is turned off.  Note that
+      the OSCope data is also cleared, so that it can no longer be displayed.
+
+      Frequency is a 32-bit HEX number, and is the number of instructions
+      between updates of the OSCope display.  If frequency is a small
+      number, the OSCope display may scroll too fast to be useful.  In this
+      case, use the THRottle command and EXecute to slow down the display.
+
+      If frequency is 0, the OSCope display enters "logic" mode in which
+      the OSCope display is updated only when there is a change on a
+      displayed I/O pin (either TRIS change or logic value change).  This is
+      useful for situations where the phase relationship between signals is
+      the important information (such as I2C control lines).
+
+      Pin numbers are GP0 .. GP5 (or their alternates A0 .. A5 or RA0 .. RA5),
+      may be used in any order, and may also be repeated (so that it's
+      easier to compare associated signals).  They are displayed, from top
+      to bottom, in the order they given in the OSCope command.
+
+      Note that the configuration word can change pin assignments, and if
+      a pin is not currently assigned as I/O then it will be flagged with
+      an error.  Thus, the configuration word may need to be set before
+      the OSCope command is used.
+
+      Note that pin names can also be valid hex numbers (via their A0 .. A5
+      synonyms), and if you forget to specify a frequency, you will not get
+      the display you expect.  If the frequency could be a pin number, a
+      warning will be displayed.
+
+      The displayed OSCope data (oscilloscope display) is character based,
+      and so is rather crude.  It gives 76 bytes of display for "normal" and
+      VGA mode, and 128 bytes of display for VESA mode.
+
+      The OSCope will display the input to the pin if the corresponding
+      TRIS bit is set, or the output from the pin if the corresponding TRIS
+      bit is cleared.  In either case, a HIGH is '-' and a LOW is '_'.  To
+      distinguish the two, input is displayed in GREEN, and output is
+      in RED.  So, a typical OSCOPE display might look like:
+         GP0 _________-------------------_________________
+         GP1 ------________________-----------_______-----
+      Note that if a pin switches between input and output, that will be
+      reflected in the OSCope display by a change in color of the displayed
+      signal.
+
+      The scrolling of the OSCope command is right-to-left, so that earlier
+      times are on the left.  So, for example, a SOFTUart transmission of an
+      'E' might look like:
+         GP0 -----______------______------__________________------______------
+                 <start  bit0  bit1  bit2  bit3  bit4  bit5  bit6  bit7  stop>
+      which is what you would expect on an oscilloscope or a timing diagram.
+
+      The use of OSCope will slow down the emulator.
+
+
+
+   Output [[d:][\path\]filename]
+      If a filename is given, echo output from PICEMU to the file.
+
+      If a filename is not given, turn off file output echo.
+
+      Only the text in the Command window is echoed to the output file.
+
+      Note that, when information windows are active, execution info,
+      processor status, and current instrction are always available (the
+      same info as the R command), and so this information is not displayed
+      after a breakpoint stops execution.  If you want this information in
+      an output file, you must explicitly use the R command.
+
+
+
+   PAUSE
+      If input is coming from a file and the output is going to the
+      screen, pause the input, display a message of
+         Press any key to continue, Esc to quit...
+      and wait for a keypress.  If the keypress is an Esc, input from
+      file is turned off.
+
+      If input is not coming from a file, or the output is going to a file,
+      this command does nothing.
+
+
+
+   POrts {[on] [off]} {[portvalue] [pin1=val [pin2=val ...]] ... }
+      If ON or OFF is specified, it must be the first parameter, and tells
+      PICEMU whether or not to display a "port window" during non-trace
+      program execution.  Note that in VESA mode, a port window is always
+      displayed.
+
+      If a portvalue and/or pin value(s) are given, they will be used as the
+      port input values after reset.
+      
+      Portvalue is a two-digit (maximum of 8 bits) hex number, which is
+      bitmapped onto GPIO.  Pins are specified as GP0 .. GP5 (or their
+      alternates A0 .. A5 and RA0 .. RA5), and their values are 4-digit hex
+      numbers, specifying an analog value (0000 is "ground", FFFF is Vdd)
+      applied to the port.  A pin value of '1' (a single digit) is treated as
+      a special case, specifying a digital TRUE value (analog value of FFFF).
+      If you really want an analog 0001, specify at least one leading 0.
+
+      I/O ports that do not exist (for example, GP4 and GP5 if HS oscillator
+      is set in the CONFIGURATION word) are flagged as invalid.  If you are
+      just giving a bitmapped port value, setting an I/O port that does not
+      exist to 1 is flagged as invalid.
+
+      Note that the configuration word can change pin assignments, so the
+      configuration word may need to be set before the POrts command is used.
+
+      So, for example, a POrts command might look like one of the following:
+         PO 3
+      or
+         PO gp0=1234 gp1=1 gp2=01 gp3=6667
+      (remember, the 'gp1=1' is interpreted as giving a digital value of 1 to
+      GP1, which is an analog value of FFFF).
+
+      Why are A0 .. A5 and RA0 .. RA5 synonyms for GP0 ... GP5?  For
+      compatibility with other flavors of PICEMU that have multiple I/O ports.
+
+      The current initial input port values will be shown (in both binary
+      digital and 4-digit analog hex), and the SHOW PORTS status will be
+      displayed.
+
+      The "port window" is a 3-line display that non-destructively overwrites
+      the screen contents.  It shows
+         I- in white letters on a black background for a LOW input port
+         I+ in black letters on a white background for a HIGH input port
+         O- in red letters on a black background for a LOW output port
+         O+ in white letters on a green background for a HIGH output port
+         A  in cyan on a black background for an analog (ADC) input port
+         C  in green on a black background for a comparitor input port
+      Below the I+ I- A and C symbols will be the 4-digit analog hex value
+      of the input port.  Output ports are always digital, and thus do
+      not display the coresponding analog value.
+
+      The port window is updated in real-time.
+
+
+
+   Proceede [time=val] [ic=[T]instructioncount] [start1[,end1]] ... [start9[,end9]]
+      Start running a program.  A breakpoint will automatically be placed on
+      the next instruction so that CALLs (or whatever) may be "stepped over."
+      Breakpoints will be placed on program memory as specified, which may be
+      ranges.  If only a starting location is given, the breakpoint is on
+      that instruction only.
+
+      Sticky breakpoints, if enabled, will be used.
+
+      Register breakpoints, if enabled, will be used.
+
+      The use of breakpoints will slow down the emulator.
+
+      If a THRottle value is set, it will slow down the emulator (that's
+      its job).
+
+      Also, the use of
+         time=xxxx
+      will tell the emulator to stop after xxxx (a hex number from 1 to FFFF,
+      without the leading 0x) system timer ticks (the standard 18.2
+      ticks/second PC timer).  Thus, 12 (hex) ticks ~= 1 second.
+
+      The IC= will tell the emulator to stop it's execution after a specified
+      number of instructions.  The instruction count is a 64-bit HEX number
+      (without the leading 0x).  If the instruction count starts with 'T'
+      (case is unimportant), the number is treated as the total number of
+      instructions to stop at, rather than the number of instructions to
+      execute before stopping.  So, for example, if the current total
+      instruction count is 100, the command
+         P IC=T101
+      will execute 1 instruction, while the command
+         P IC=101
+      will execute 101 (hex, 257 decimal) instructions, providing the
+      breakpoint after the current instruction is not reached.
+
+      Use RightShift + ESC to stop a running program and return to the
+      command prompt.
+
+
+
+   Quit
+      Quit the PICEMU program.
+
+
+
+   READUsestris {[on] [off]}
+      Set/disable whether the TRIS register is used in a port read or not.
+      The new value is displayed.
+
+      The default value is read uses tris ON.
+
+      Why is this paramter here?  Well, it has to do with what happens when
+      you try to read the GPIO port when some of the signals are outputs.
+      After some investigation, it seems that the best thing to do is to
+      read back the value of the output signal.  But, if you want to change
+      that, READUsestris will let you do it.
+
+
+
+   REGBreakpoints {[on] [off]} [[[{R W}]start1[,end1][[&mask1]=val1]] ...]
+   BRegisters {[on] [off]} [[[{R W}]start1[,end1][[&mask1]=val1]] ...]
+      Set or disable or display register breakpoints.  A maximum of 10
+      register breakpoints may be set.
+
+      If ON or OFF is specified, it must be the first parameter, and
+      register breakpoint status will be set to the desired value.
+
+      If a breakpoint list is given, breakpoints will be placed on registers
+      as specified, which may be ranges.  If only a starting location is
+      given, the breakpoint will be on that register only.  Note that setting
+      a list of breakpoints automatically turns breakpoints on, which will
+      override an OFF before a list of breakpoints.
+
+      If R or W is specified at the start of the breakpoint, the breakpoint
+      will be set on Reads only or Writes only, otherwise the breakpoint will
+      be set on both Reads and Writes.
+
+      Register breakpoints may be specified with an optional value, and if
+      a value is given, an optional mask.  These are 2-digit HEX numbers.
+      If a mask is given it will be ANDed with the value read from the register
+      or to be written to the register.  If a value (and optional mask) is
+      given, the value to be written to (or read from) a register must match
+      the (masked) value for the breakpoint to occur.
+
+      Note that, when a value (and optional mask) is used, a breakpoint on
+      Write can occur BEFORE the execution of the instruction.  However, a
+      breakpoint on Read must read the register, which can have irreversible
+      effects on the processor, and so the breakpoint will occur AFTER the
+      execution of the instruction.
+
+      The current breakpoints and their ON/OFF state will be displayed.
+
+      The use of breakpoints will slow down the emulator.
+
+      Breakpoint on register only occurs during access by program code,
+      not timers, port I/O, etc.
+
+
+
+   Registers [reg [value]]
+      If no parametrs are given, the current instruction info (registers,
+      program memory value at IP and instruction mnemonic, etc) will be given.
+      The current and maximum stack depth are displayed, as well as the
+      contents of the stack if the current stack depth is not 0.  A maximum
+      stack depth > 8 indicates a stack overflow, and a maximum stack depth
+      of -1 indicates a stack underflow (any amount of underflow will show a
+      maximum stack depth of -1, not just one level of stack underflow).
+
+      If a register number (can be an expression) is given, the contents
+      of that register only will be displayed.
+
+      If a register number (can be an expression) is given along with a
+      value (can also be an expression), the register will be set to the
+      value given.  Nothing will be displayed.
+
+      In addition to hex numbers, the register names W and IP (case
+      insensitive) are recognized.
+
+
+
+   RESET [{val RAND}]
+      Do a power-up reset of the processor.  Special Function Registers (SFR's)
+      are set as described in the Microchip documentation.
+      
+      If no value is give, the other registers are not changed.  If a value
+      is given (from 00 to ff), registers are filled with that value.  If
+      "RAND" (case insensitive) is given, registers are filled with
+      pseudo-random values.
+
+      Note that the pseudo-random values follow the same sequence every
+      time PICEMU is run.  So, if you have a problem with a particular set
+      of "random" register values, you can get back to that condition by
+      restarting PICEMU and using
+         RESET RAND
+      the appropriate number of times (or use a .PIM file to save the
+      program and processor state including register values).
+
+      NOTE:  When using RESET, the Schmitt trigger hysterisis is ignored,
+             and a digital TRUE is an analog value greater than CCCC (hex),
+             otherwise the digital input is FALSE.
+
+
+
+   RETurn [time=val] [ic=[T]instructioncount] [start1[,end1]] ... [start9[,end9]]
+      Start running a program.  If the stack is not empty, a breakpoint will
+      be placed on the instruction pointed to by the Top-Of-Stack, so that
+      you can "step out of" CALLs or Interrupts.
+
+      If the stack is empty, an error message will be displayed and the
+      program will not be run.
+
+      Breakpoints will be placed on program memory as specified, which may
+      be ranges.  If only a starting location is given, the breakpoint is on
+      that instruction only.
+
+      Sticky breakpoints, if enabled, will be used.
+
+      Register breakpoints, if enabled, will be used.
+
+      The use of breakpoints will slow down the emulator.
+
+      If a THRottle value is set, it will slow down the emulator (that's
+      its job).
+
+      Also, the use of
+         time=xxxx
+      will tell the emulator to stop after xxxx (a hex number from 1 to
+      ffff, without the leading 0x) system timer ticks (the standard 18.2
+      ticks/second PC timer).  Thus, 12 (hex) ticks ~= 1 second.
+
+      The IC= will tell the emulator to stop it's execution after a specified
+      number of instructions.  The instruction count is a 64-bit HEX number
+      (without the leading 0x).  If the instruction count starts with 'T'
+      (case is unimportant), the number is treated as the total number of
+      instructions to stop at, rather than the number of instructions to
+      execute before stopping.  So, for example, if the current total
+      instruction count is 100, the command
+         RET IC=T101
+      will execute 1 instruction, while the command
+         RET IC=101
+      will execute 101 (hex, 257 decimal) instructions, providing the
+      breakpoint at the top-of-stack is not reached.
+
+      Use RightShift + ESC to stop a running program and return to the
+      command prompt.
+
+
+
+   SCReen {[ON] [OFF]}
+      Set/disable and display SOFTUart screen swapping mode.
+
+      If screen swapping mode is enabled, a terminal screen is used during
+      Go, Proceede, CHECKPoint and EXecute program execution so that the
+      terminal and PICEMU output don't interfere with each other.  A RESET
+      will clear the terminal screen.
+
+      If either ON or OFF is specified, screen swapping mode will be set
+      to the desired state.  The default state is ON.
+
+      The new state will be displayed.
+
+
+
+   SETPorts {[portvalue] [pin1=val [pin2=val ...]] ... }
+      If a portvalue and/or pin value(s) are given, they applied immediately
+      to the I/O ports.
+
+      Portvalue is a two-digit (maximum of 8 bits) hex number, which is
+      bitmapped onto GPIO.  Pins are specified as GP0 .. GP5 (or their
+      alternates A0 .. A5 or RA0 .. RA5), and their values are 4-digit hex
+      numbers, specifying an analog value (0000 is "ground", FFFF is Vdd)
+      applied to the port.  A pin value of '1' (a single digit) is treated as
+      a special case, specifying a digital TRUE value (analog value of FFFF).
+      If you really want an analog 0001, specify at least one leading 0.
+
+      I/O ports that do not exist (for example, GP4 and GP5 if HS oscillator
+      is set in the CONFIGURATION word) are flagged as invalid.  If you are
+      just giving a bitmapped port value, setting an I/O port that does not
+      exist to 1 is flagged as invalid.
+
+      Note that the configuration word can change pin assignments, so the
+      configuration word may need to be set before the SETPorts command is
+      used.
+
+      So a SETPorts commands might look like one of the following:
+         SETP 3
+      or
+         SETP gp0=1234 gp1=1 gp2=01 gp3=6667
+      (remember, the 'gp1=1' is interpreted as giving a digital value of 1 to
+      GP1, which is an analog value of FFFF).
+
+      Why are A0 .. A5 and RA0 .. RA5 synonyms for GP0 ... GP5?  For
+      compatibility with other flavors of PICEMU that have multiple I/O ports.
+
+      NOTE:  When using SETPorts, the Schmitt trigger hysterisis is ignored,
+             and a digital TRUE is an analog value greater than CCCC (hex),
+             otherwise the digital input is FALSE.
+
+
+
+   SHOWregs   [start1[,end1]] [start2[,end2]] ...
+   REGDisplay [start1[,end1]] [start2[,end2]] ...
+      Since the 12F675 has more registers than can fit on a single screen,
+      the default display is limited to registers 00 to 1f.
+
+      Additional registers can be displayed with the SHOWregs (or REGDisplay)
+      command.  A list of starting, and optionally ending (separated by a
+      comma), registers is given on the command line.  If no ending register
+      is given, only the register specified will be displayed.
+
+      Entering a new list of registers clears the old list.
+
+      If no registers are given, this command does nothing.
+
+
+
+   SOFTUart {[off] [[!]txpin txbaudrate txformat [[!]rxpin rxbaudrate rxformat]]}
+      Setup PICEMU to interpret output on the TX pin as RS232 output
+      from a software UART, and optionally to send RS232 input to a software
+      UART on the RX pin.  TX from the emulated PIC chip is displayed on
+      the screen, and keyboard characters are send to the emulated PIC chip
+      via RX.
+
+      Note:  A SOFTUart is also known as "bit banging".
+
+      TX baudrate is a decimal number from 110 to 57600 (and a maximum of
+      clock frequency / 16, so that a clock frequency of 32768Hz has a
+      maximum baudrate of 2048).
+
+      Question:  Would anyone need support for a higher SOFTUart baudrate?
+
+      TX format is databits, parity, and stop bits, from the set of
+         { 7 8 }{ E O N }{ 1 2 }
+      (E = Even parity, O = Odd parity, N = No parity).  While parity
+      is specified so that the received data may be properly parsed, it
+      is not checked.
+
+      If used, RX follows the same format of pin, baudrate, and data format.
+      Parity, if used, is correctly generated.
+
+      It is important to note that TX and RX can have completely different
+      baudrates and data formats.  And RX does not need to be used at all.
+
+      If the first parameter to SOFTUart is OFF (case insensitive), SOFTUart
+      processing is turned off.
+
+      If no paramters are given, the current SOFTUart setup is displayed.
+
+      By default, the SOFTUart uses the RS232 logic levels of HIGH is inactive
+      (logic 0) and LOW is active (logic 1).  For compatibility with hardware,
+      both TX and RX may be individually logically inverted to LOW is inactive
+      (logic 0) and HIGH is active (logic 1) by putting a '!' before the pin.
+
+      So, a typical SOFTUart command would be something like:
+         SOFTUART GP4 9600 8N1 GP5 9600 8N1
+      or
+         SOFTUART !A0 2400 8N1 !A1 2400 8N1
+
+      For an example, see the accompanying T0_SUART.* files
+
+
+
+   STIMulus {OFF [d:][\path\]filename}
+      Load a stimulus file.  This has been written to be compatible with
+      MPLAB stimulus files.  To this end, the instruction counts (CYCLE
+      or STEP column of the stimulus file) are relative to the STOPWatch,
+      not the total instruction count.
+      
+      A stimulus file is an ASCII TEXT file that contains a header line of
+      the form:
+         CYCLE    pin [pin] [pin] ...  ; comment
+      or
+         STEP     pin [pin] [pin] ...  ; comment
+      or
+         PERIODIC pin [pin] [pin] ...  ; comment
+      Where pin is GP0 .. GP5 (or their alternates A0 .. A5 or RA0 .. RA5)
+      in any order.  The same pin cannot be specified more than once.  The
+      comment may also begin with an exclamation (!), and is optional.
+
+      Note that A0 .. A5 and RA0 .. RA5 synonyms for GP0 ... GP5 for
+      compatibility with other flavors of PICEMU that have multiple I/O ports.
+
+      Note that MCLR is on pin GP3, and is treated as such if MCLRE in
+      the configuration word is set.  Setting a LOW (0) value will reset
+      the 12F675.
+      
+      Note that the configuration word can change pin assignments, and if
+      a pin is not currently assigned as I/O then it will be flagged with
+      an error.  Thus, the configuration word may need to be set before
+      the STIMulus command is used.
+
+      If the stimulus file has CYCLE as the first column header, the
+      corresponding cycle counts are treated as "absolute values" of the
+      STOPWatch count.  If the stimulus file has STEP or PERIODIC as the
+      first column header, the corresponding cycle counts are treated as
+      incremental values, starting from STOPWatch count 0.  Thus, if a file
+      has STEP counts of 1, 10, and 100, they correspond to "absolute cycle
+      counts" of 1, 11, and 111.
+
+      In either case, the count is the stopwatch count AFTER which to set the
+      pin values.  The exception to this is if the stopwatch count is equal
+      to the CYCLE count when the program starts to run (effectively a 0
+      count), in which case the pin values are set before the execution
+      starts.
+
+      A PERIODIC stimulus repeats the sequence once it reaches the end of
+      the list.  Since stimulus is based on the stopwatch, the stopwatch is
+      reset at the end of the list.  It is a good idea to allow an extra
+      entry at the end of a PERIODIC stimulus file so that the last stimuls
+      value is set for the appropriate amount of time.  For example,
+         periodic  a0
+             0      0       ;set A0 to 0 at stopwatch == 0
+          1000      1       ;set A0 to 1 after 1000 (hex) instructions
+          2000      1       ;allow A0 to remain at 1 for a while, otherwise
+                            ;it would "instantly" return to 0 after 1000
+                            ;instructions
+
+      The rest of the stimulus file must be blank (or comment) lines, which
+      are ignored, or values which correspond to the header line.  The
+      CYCLE or STEP or PERIODIC counts are decimal numbers that range from 0
+      to 4294967295 (== (2^32)-1), and MUST increase for every line of the
+      stimulus file.   Also, while the stopwatch is a 64-bit count, the
+      stimulus file only allows 32-bit numbers for counts (MPLAB
+      compatibility).  Stopwatch counts beyond this 32-bit limit do not
+      create pin stimulus events.
+
+      The remaining (non-comment) columns must be an analog value (0000 to
+      FFFF) that is applied to the pin named in the header line.  All values
+      must be given, even if they have not changed, so that PICEMU knows which
+      value goes with which pin.  Note that a value of '1' (a single charater)
+      is treated as a digital TRUE value, and given an analog value of FFFF.
+      If you want an analog 0001, append at least one leading 0.
+
+      Since stimulus files are tied to the STOPWatch count (MPLAB
+      compatibility), resetting the STOPWatch will reset the stimulus
+      file, too.
+
+      So, an example stimulus file might look like:
+         ; setup for the big test
+         cycle    gp0   gp1   gp2  ; GP2 is the TMR0 input
+          4000000  0    1234   0   ; 4 simulated seconds at Frequency = 4Mhz
+          5000000  0    1      1   ; 5 simulated seconds
+          8000000  0    2345   0   ; 8 simulated seconds, TMR0 increments here
+         ; now we wait a long time
+         55000000  1    2345   0   ; 55 simulated seconds
+         55000001  1    6789   1   ; a 1us delay
+         55000002  1    ABCD   0   ; another 1us delay, TMR0 increments here
+
+      Note that columns do not have to be aligned, they just have to be
+      separated by at least one space or tab.  So, a valid stimulus file
+      can also look like:
+               step   gp1              gp2 gp3
+         0 0 0 0
+                          10            0 1               0
+            100 0                            0 1
+                   101 1 0 1
+      which is pretty awful to read, but computer programs don't care.
+
+      For other examples of a stimulus file, see the *.STM files included with
+      this package.
+
+      There is currently a limit of 128 lines of pin changes in a stimulus
+      file.  If this is not big enough, please let me know.
+
+
+
+   STOPWatch
+      Reset the stopwatch to 0.  This is useful for timing a code sequence
+      or resetting a stimulus file.
+
+
+
+   SYMbols [anything]
+      Dump the symbol table to the screen.
+
+      If no parameters are given, one page at a time is displayed, and
+      the user is prompted for a keypress before continuing.
+
+      If any parameter is given (the value does not matter), the symbol
+      table is displayed without any pauses.  This is useful for the Output
+      command.
+
+      If you just want to display the value of a single symbol, use the
+      CALC command:
+         CALC symbol
+
+
+
+   THRottle [value]
+      A delay of 0 (no delay) to FFFF will be added to the emulation of each
+      instruction (including forced NOPs due to GOTO, BTFSS, BTFSC, CALL,
+      RETURN, etc) when the simulator is running.  The amount of slowdown due
+      to throttling is not a constant, you should experiment to find the
+      correct value for your system and program being emulated.
+
+      If no value is given, the current throttle is displayed.
+
+
+
+   Trace [instructioncount]
+   F12 (functionkey press, before anything else has been typed)
+      Execute a program in TRACE mode.  If an instruction count is given
+      (a 16-bit HEX number), that many instructions are traced, otherwise
+      one instruction is executed.  When F12 is used, only 1 instruction
+      is executed.
+
+      The number of NOPs forced by GOTO / CALL / etc is not included in the
+      Trace count.
+
+      Press ESC to stop a running program and return to the command prompt.
+
+
+
+   TRACETrue [instructioncount]
+   TTrace [instructioncount]
+      Execute a program in TRACE mode.  If an instruction count is given
+      (a 16-bit HEX number), that many instructions are traced, otherwise
+      one instruction is executed.
+
+      The number of NOPs forced by GOTO / CALL / etc is included in the
+      TRACETrue count.
+
+      Press ESC to stop a running program and return to the command prompt.
+
+
+
+   Unassemble [start [{Llen end}]]
+      Unassemble program memory.  The default is to disassemble 16 (decimal)
+      instructions from the last disassembly location (or reset IP after
+      a reset).
+
+      If a start locaton is given, disassembly will start from that
+      location.
+
+      If a length is given, that many instructions will be disassembled.
+
+      If an end is given, disassembly will continue until end is reached.
+
+      Disassembly may wrap-around in the program space.
+
+      Since unrecognized opcodes (such as 0001) are treated as NOPs, they are
+      disassembled as NOPU, which notes that this is an effective NOP, but is
+      also an Unrecognized opcode.
+
+
+
+   View [p]
+      View the current SOFTUart screen until another key is pressed.
+
+      If P is specified (case insensitive), the port screen will be
+      displayed until another key is pressed.
+
+
+
+   WAke [anything]
+      If the processor is in SLEEP mode, wake it up.  If any parameter is
+      given, the processor status is updated as if something had awakened
+      the processor, otherwise the processor status is unchanged.
+
+      The processor resumes execution with the instruction after the
+      SLEEP instruction.
+
+
+
+   WATCHDog {[on] [off]}
+      Set/disable breakpoint on watchdog reset.  The new value is displayed.
+
+      The default value is breakpoint on watchdog reset ON.
+
+
+
+   WATchregs {[OFF] [[reg1] [reg2] ... [reg24]]}
+      Set a list of registers to watch in "real time" while the program
+      is executing.  Up to 24 (decimal) registers may be watched at
+      once.
+
+      The display is updated once a (real-time)second.  If you feel this
+      is not fast enough, please let me know.
+
+      If no list is given, the current list is displayed.
+
+      If OFF is given (case does not matter), watchregs are turned off.
+
+      Note that, if information windows are not displayed (not in VESA or
+      VGA text mode), the watchregs are displayed on the main screen
+      while the program is running.
+
+
+
+   Where [num]
+      Where was I?
+
+      Show the last num instructions executed, up to a limit of 7FF
+      instructions.  The default is 10 (16 decimal).
+
+      Only as many instructions as have been executed since the last RESET
+      will be shown, and only instructions that are actually executed will
+      be shown -- NOPs due to CALL / GOTO / etc will not be shown.
+
+      Press ESC to stop a long Where output.
+
+
+
+   WRite [d:][\path\]filename
+   SAve  [d:][\path\]filename
+      Save current PICEMU status in a .PIM file which contains the program
+      memory, the registers, EEPROM, IP, W, configuration, and some other
+      internal information.  When loaded, PICEMU should be able to continue
+      executing from the point where the PIM file was written.
+
+      The contents of PIM files may change between releases.
+
+      Note that the EEPROM information saved is the internal EEPROM, not
+      the "external" EEPROM setup by the I2C command.
+
+
+
+USER INTERFACE IMPROVEMENT NOTES:
+
+   The next release of PICEMU will be concentrating on improving the user
+   interface.  Right now, it's pretty primitive.
+
+   I'd like some feedback on what you can't live without, what you would like
+   to see, and what should be avoided.
+
+   Please keep in mind that the basic DOS-based program nature of PICEMU is
+   not going to be changing, and to keep things small and fast I have to
+   severely limit the code and data that can be dedicated to the UI.
+
+
+
+NEW PROCESSOR EMULATORS:
+
+   While 16-bit and enhanced 16-bit cores are planned, they are a ways
+   off into the future.
+
+   However, the 12-bit and 14-bit cores are fairly complete.
+
+   What other PIC processors would you like to see emulated?  Please keep
+   in mind that several PIC processors can be emulated by a single program,
+   such as the 12F629 being handled by the P12F675 program (code for the
+   629 doesn't have the ADC).
+
+
+
+LOADING USER CODE INTO PICEMU:
+
+   One possible upgrade to PICEMU is loading user code modules that can
+   hook into PICEMU processing, allowing the user to write their own
+   hardware expansion.
+
+   Is this something you would be interested in?  How much access would
+   your code require into the "internal state" of the processor beyond
+   read access to the registers, the clock frequency, the instruction count,
+   and read/write access to the I/O buffers?  Would your code require
+   notification of every instruction cycle, or only event notification
+   (I/O pin change, etc)?
+
+
+
+MAPPING I/O PINS TO PARALLEL PORT PINS:
+
+   A planned (for a long time now) upgrade to PICEMU is allowing access
+   to the "real world" by using the signals of the PC's parallel port to
+   map to the PICs' I/O pins.
+
+   While this may sound simple, there are a number of traps.  For example,
+   while the PICs' I/O pins may be individually tri-stated (by TRIS
+   registers), there is only 1 tri-state signal for all of the parallel port's
+   data pins.  This means that one data signal cannot be used for input while
+   it's neighbor is used for output, since changing the tri-state mode of the
+   parallel port data signals to read the input would change the state of its
+   output-only neighbor.  This limits the number of input pins to 5 (or 4 if
+   if interrupts are used, see below), and makes code that changes the
+   definition of an I/O pin "on-the-fly" via a TRIS command very difficult,
+   as it has to be assoicated with one parallel port pin for input and a
+   different parallel port pin for output.
+
+   In addition, when running under an OS like Windows NT (or 2000 or XP ...),
+   port I/O is very slow, so that it's not feasable to check the input port
+   every instruction, and even a quickly changing output port may be very
+   slow.
+
+   One route around checking the input port every instruction is to use
+   interrupts on the !ACK line, but this assumes that a free IRQ is available,
+   limits the number of input lines to 4, and requires external hardware to
+   strobe the !ACK line on signal change.
+
+   I'm going to do what I can, but I would appreciate feedback and suggestions.
+
+---------------------
+
+GNU Free Documentation License
+(from http://www.gnu.org/licenses/fdl.txt)
+
+		GNU Free Documentation License
+		  Version 1.2, November 2002
+
+
+ Copyright (C) 2000,2001,2002  Free Software Foundation, Inc.
+     59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+
+0. PREAMBLE
+
+The purpose of this License is to make a manual, textbook, or other
+functional and useful document "free" in the sense of freedom: to
+assure everyone the effective freedom to copy and redistribute it,
+with or without modifying it, either commercially or noncommercially.
+Secondarily, this License preserves for the author and publisher a way
+to get credit for their work, while not being considered responsible
+for modifications made by others.
+
+This License is a kind of "copyleft", which means that derivative
+works of the document must themselves be free in the same sense.  It
+complements the GNU General Public License, which is a copyleft
+license designed for free software.
+
+We have designed this License in order to use it for manuals for free
+software, because free software needs free documentation: a free
+program should come with manuals providing the same freedoms that the
+software does.  But this License is not limited to software manuals;
+it can be used for any textual work, regardless of subject matter or
+whether it is published as a printed book.  We recommend this License
+principally for works whose purpose is instruction or reference.
+
+
+1. APPLICABILITY AND DEFINITIONS
+
+This License applies to any manual or other work, in any medium, that
+contains a notice placed by the copyright holder saying it can be
+distributed under the terms of this License.  Such a notice grants a
+world-wide, royalty-free license, unlimited in duration, to use that
+work under the conditions stated herein.  The "Document", below,
+refers to any such manual or work.  Any member of the public is a
+licensee, and is addressed as "you".  You accept the license if you
+copy, modify or distribute the work in a way requiring permission
+under copyright law.
+
+A "Modified Version" of the Document means any work containing the
+Document or a portion of it, either copied verbatim, or with
+modifications and/or translated into another language.
+
+A "Secondary Section" is a named appendix or a front-matter section of
+the Document that deals exclusively with the relationship of the
+publishers or authors of the Document to the Document's overall subject
+(or to related matters) and contains nothing that could fall directly
+within that overall subject.  (Thus, if the Document is in part a
+textbook of mathematics, a Secondary Section may not explain any
+mathematics.)  The relationship could be a matter of historical
+connection with the subject or with related matters, or of legal,
+commercial, philosophical, ethical or political position regarding
+them.
+
+The "Invariant Sections" are certain Secondary Sections whose titles
+are designated, as being those of Invariant Sections, in the notice
+that says that the Document is released under this License.  If a
+section does not fit the above definition of Secondary then it is not
+allowed to be designated as Invariant.  The Document may contain zero
+Invariant Sections.  If the Document does not identify any Invariant
+Sections then there are none.
+
+The "Cover Texts" are certain short passages of text that are listed,
+as Front-Cover Texts or Back-Cover Texts, in the notice that says that
+the Document is released under this License.  A Front-Cover Text may
+be at most 5 words, and a Back-Cover Text may be at most 25 words.
+
+A "Transparent" copy of the Document means a machine-readable copy,
+represented in a format whose specification is available to the
+general public, that is suitable for revising the document
+straightforwardly with generic text editors or (for images composed of
+pixels) generic paint programs or (for drawings) some widely available
+drawing editor, and that is suitable for input to text formatters or
+for automatic translation to a variety of formats suitable for input
+to text formatters.  A copy made in an otherwise Transparent file
+format whose markup, or absence of markup, has been arranged to thwart
+or discourage subsequent modification by readers is not Transparent.
+An image format is not Transparent if used for any substantial amount
+of text.  A copy that is not "Transparent" is called "Opaque".
+
+Examples of suitable formats for Transparent copies include plain
+ASCII without markup, Texinfo input format, LaTeX input format, SGML
+or XML using a publicly available DTD, and standard-conforming simple
+HTML, PostScript or PDF designed for human modification.  Examples of
+transparent image formats include PNG, XCF and JPG.  Opaque formats
+include proprietary formats that can be read and edited only by
+proprietary word processors, SGML or XML for which the DTD and/or
+processing tools are not generally available, and the
+machine-generated HTML, PostScript or PDF produced by some word
+processors for output purposes only.
+
+The "Title Page" means, for a printed book, the title page itself,
+plus such following pages as are needed to hold, legibly, the material
+this License requires to appear in the title page.  For works in
+formats which do not have any title page as such, "Title Page" means
+the text near the most prominent appearance of the work's title,
+preceding the beginning of the body of the text.
+
+A section "Entitled XYZ" means a named subunit of the Document whose
+title either is precisely XYZ or contains XYZ in parentheses following
+text that translates XYZ in another language.  (Here XYZ stands for a
+specific section name mentioned below, such as "Acknowledgements",
+"Dedications", "Endorsements", or "History".)  To "Preserve the Title"
+of such a section when you modify the Document means that it remains a
+section "Entitled XYZ" according to this definition.
+
+The Document may include Warranty Disclaimers next to the notice which
+states that this License applies to the Document.  These Warranty
+Disclaimers are considered to be included by reference in this
+License, but only as regards disclaiming warranties: any other
+implication that these Warranty Disclaimers may have is void and has
+no effect on the meaning of this License.
+
+
+2. VERBATIM COPYING
+
+You may copy and distribute the Document in any medium, either
+commercially or noncommercially, provided that this License, the
+copyright notices, and the license notice saying this License applies
+to the Document are reproduced in all copies, and that you add no other
+conditions whatsoever to those of this License.  You may not use
+technical measures to obstruct or control the reading or further
+copying of the copies you make or distribute.  However, you may accept
+compensation in exchange for copies.  If you distribute a large enough
+number of copies you must also follow the conditions in section 3.
+
+You may also lend copies, under the same conditions stated above, and
+you may publicly display copies.
+
+
+3. COPYING IN QUANTITY
+
+If you publish printed copies (or copies in media that commonly have
+printed covers) of the Document, numbering more than 100, and the
+Document's license notice requires Cover Texts, you must enclose the
+copies in covers that carry, clearly and legibly, all these Cover
+Texts: Front-Cover Texts on the front cover, and Back-Cover Texts on
+the back cover.  Both covers must also clearly and legibly identify
+you as the publisher of these copies.  The front cover must present
+the full title with all words of the title equally prominent and
+visible.  You may add other material on the covers in addition.
+Copying with changes limited to the covers, as long as they preserve
+the title of the Document and satisfy these conditions, can be treated
+as verbatim copying in other respects.
+
+If the required texts for either cover are too voluminous to fit
+legibly, you should put the first ones listed (as many as fit
+reasonably) on the actual cover, and continue the rest onto adjacent
+pages.
+
+If you publish or distribute Opaque copies of the Document numbering
+more than 100, you must either include a machine-readable Transparent
+copy along with each Opaque copy, or state in or with each Opaque copy
+a computer-network location from which the general network-using
+public has access to download using public-standard network protocols
+a complete Transparent copy of the Document, free of added material.
+If you use the latter option, you must take reasonably prudent steps,
+when you begin distribution of Opaque copies in quantity, to ensure
+that this Transparent copy will remain thus accessible at the stated
+location until at least one year after the last time you distribute an
+Opaque copy (directly or through your agents or retailers) of that
+edition to the public.
+
+It is requested, but not required, that you contact the authors of the
+Document well before redistributing any large number of copies, to give
+them a chance to provide you with an updated version of the Document.
+
+
+4. MODIFICATIONS
+
+You may copy and distribute a Modified Version of the Document under
+the conditions of sections 2 and 3 above, provided that you release
+the Modified Version under precisely this License, with the Modified
+Version filling the role of the Document, thus licensing distribution
+and modification of the Modified Version to whoever possesses a copy
+of it.  In addition, you must do these things in the Modified Version:
+
+A. Use in the Title Page (and on the covers, if any) a title distinct
+   from that of the Document, and from those of previous versions
+   (which should, if there were any, be listed in the History section
+   of the Document).  You may use the same title as a previous version
+   if the original publisher of that version gives permission.
+B. List on the Title Page, as authors, one or more persons or entities
+   responsible for authorship of the modifications in the Modified
+   Version, together with at least five of the principal authors of the
+   Document (all of its principal authors, if it has fewer than five),
+   unless they release you from this requirement.
+C. State on the Title page the name of the publisher of the
+   Modified Version, as the publisher.
+D. Preserve all the copyright notices of the Document.
+E. Add an appropriate copyright notice for your modifications
+   adjacent to the other copyright notices.
+F. Include, immediately after the copyright notices, a license notice
+   giving the public permission to use the Modified Version under the
+   terms of this License, in the form shown in the Addendum below.
+G. Preserve in that license notice the full lists of Invariant Sections
+   and required Cover Texts given in the Document's license notice.
+H. Include an unaltered copy of this License.
+I. Preserve the section Entitled "History", Preserve its Title, and add
+   to it an item stating at least the title, year, new authors, and
+   publisher of the Modified Version as given on the Title Page.  If
+   there is no section Entitled "History" in the Document, create one
+   stating the title, year, authors, and publisher of the Document as
+   given on its Title Page, then add an item describing the Modified
+   Version as stated in the previous sentence.
+J. Preserve the network location, if any, given in the Document for
+   public access to a Transparent copy of the Document, and likewise
+   the network locations given in the Document for previous versions
+   it was based on.  These may be placed in the "History" section.
+   You may omit a network location for a work that was published at
+   least four years before the Document itself, or if the original
+   publisher of the version it refers to gives permission.
+K. For any section Entitled "Acknowledgements" or "Dedications",
+   Preserve the Title of the section, and preserve in the section all
+   the substance and tone of each of the contributor acknowledgements
+   and/or dedications given therein.
+L. Preserve all the Invariant Sections of the Document,
+   unaltered in their text and in their titles.  Section numbers
+   or the equivalent are not considered part of the section titles.
+M. Delete any section Entitled "Endorsements".  Such a section
+   may not be included in the Modified Version.
+N. Do not retitle any existing section to be Entitled "Endorsements"
+   or to conflict in title with any Invariant Section.
+O. Preserve any Warranty Disclaimers.
+
+If the Modified Version includes new front-matter sections or
+appendices that qualify as Secondary Sections and contain no material
+copied from the Document, you may at your option designate some or all
+of these sections as invariant.  To do this, add their titles to the
+list of Invariant Sections in the Modified Version's license notice.
+These titles must be distinct from any other section titles.
+
+You may add a section Entitled "Endorsements", provided it contains
+nothing but endorsements of your Modified Version by various
+parties--for example, statements of peer review or that the text has
+been approved by an organization as the authoritative definition of a
+standard.
+
+You may add a passage of up to five words as a Front-Cover Text, and a
+passage of up to 25 words as a Back-Cover Text, to the end of the list
+of Cover Texts in the Modified Version.  Only one passage of
+Front-Cover Text and one of Back-Cover Text may be added by (or
+through arrangements made by) any one entity.  If the Document already
+includes a cover text for the same cover, previously added by you or
+by arrangement made by the same entity you are acting on behalf of,
+you may not add another; but you may replace the old one, on explicit
+permission from the previous publisher that added the old one.
+
+The author(s) and publisher(s) of the Document do not by this License
+give permission to use their names for publicity for or to assert or
+imply endorsement of any Modified Version.
+
+
+5. COMBINING DOCUMENTS
+
+You may combine the Document with other documents released under this
+License, under the terms defined in section 4 above for modified
+versions, provided that you include in the combination all of the
+Invariant Sections of all of the original documents, unmodified, and
+list them all as Invariant Sections of your combined work in its
+license notice, and that you preserve all their Warranty Disclaimers.
+
+The combined work need only contain one copy of this License, and
+multiple identical Invariant Sections may be replaced with a single
+copy.  If there are multiple Invariant Sections with the same name but
+different contents, make the title of each such section unique by
+adding at the end of it, in parentheses, the name of the original
+author or publisher of that section if known, or else a unique number.
+Make the same adjustment to the section titles in the list of
+Invariant Sections in the license notice of the combined work.
+
+In the combination, you must combine any sections Entitled "History"
+in the various original documents, forming one section Entitled
+"History"; likewise combine any sections Entitled "Acknowledgements",
+and any sections Entitled "Dedications".  You must delete all sections
+Entitled "Endorsements".
+
+
+6. COLLECTIONS OF DOCUMENTS
+
+You may make a collection consisting of the Document and other documents
+released under this License, and replace the individual copies of this
+License in the various documents with a single copy that is included in
+the collection, provided that you follow the rules of this License for
+verbatim copying of each of the documents in all other respects.
+
+You may extract a single document from such a collection, and distribute
+it individually under this License, provided you insert a copy of this
+License into the extracted document, and follow this License in all
+other respects regarding verbatim copying of that document.
+
+
+7. AGGREGATION WITH INDEPENDENT WORKS
+
+A compilation of the Document or its derivatives with other separate
+and independent documents or works, in or on a volume of a storage or
+distribution medium, is called an "aggregate" if the copyright
+resulting from the compilation is not used to limit the legal rights
+of the compilation's users beyond what the individual works permit.
+When the Document is included in an aggregate, this License does not
+apply to the other works in the aggregate which are not themselves
+derivative works of the Document.
+
+If the Cover Text requirement of section 3 is applicable to these
+copies of the Document, then if the Document is less than one half of
+the entire aggregate, the Document's Cover Texts may be placed on
+covers that bracket the Document within the aggregate, or the
+electronic equivalent of covers if the Document is in electronic form.
+Otherwise they must appear on printed covers that bracket the whole
+aggregate.
+
+
+8. TRANSLATION
+
+Translation is considered a kind of modification, so you may
+distribute translations of the Document under the terms of section 4.
+Replacing Invariant Sections with translations requires special
+permission from their copyright holders, but you may include
+translations of some or all Invariant Sections in addition to the
+original versions of these Invariant Sections.  You may include a
+translation of this License, and all the license notices in the
+Document, and any Warranty Disclaimers, provided that you also include
+the original English version of this License and the original versions
+of those notices and disclaimers.  In case of a disagreement between
+the translation and the original version of this License or a notice
+or disclaimer, the original version will prevail.
+
+If a section in the Document is Entitled "Acknowledgements",
+"Dedications", or "History", the requirement (section 4) to Preserve
+its Title (section 1) will typically require changing the actual
+title.
+
+
+9. TERMINATION
+
+You may not copy, modify, sublicense, or distribute the Document except
+as expressly provided for under this License.  Any other attempt to
+copy, modify, sublicense or distribute the Document is void, and will
+automatically terminate your rights under this License.  However,
+parties who have received copies, or rights, from you under this
+License will not have their licenses terminated so long as such
+parties remain in full compliance.
+
+
+10. FUTURE REVISIONS OF THIS LICENSE
+
+The Free Software Foundation may publish new, revised versions
+of the GNU Free Documentation License from time to time.  Such new
+versions will be similar in spirit to the present version, but may
+differ in detail to address new problems or concerns.  See
+http://www.gnu.org/copyleft/.
+
+Each version of the License is given a distinguishing version number.
+If the Document specifies that a particular numbered version of this
+License "or any later version" applies to it, you have the option of
+following the terms and conditions either of that specified version or
+of any later version that has been published (not as a draft) by the
+Free Software Foundation.  If the Document does not specify a version
+number of this License, you may choose any version ever published (not
+as a draft) by the Free Software Foundation.
+
+
+ADDENDUM: How to use this License for your documents
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and
+license notices just after the title page:
+
+    Copyright (c)  YEAR  YOUR NAME.
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.2
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    A copy of the license is included in the section entitled "GNU
+    Free Documentation License".
+
+If you have Invariant Sections, Front-Cover Texts and Back-Cover Texts,
+replace the "with...Texts." line with this:
+
+    with the Invariant Sections being LIST THEIR TITLES, with the
+    Front-Cover Texts being LIST, and with the Back-Cover Texts being LIST.
+
+If you have Invariant Sections without Cover Texts, or some other
+combination of the three, merge those two alternatives to suit the
+situation.
+
+If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of
+free software license, such as the GNU General Public License,
+to permit their use in free software.
